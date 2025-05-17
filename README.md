@@ -49,7 +49,7 @@ This structure ensures:
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/yourusername/task-time-tracker.git
+   git clone https://github.com/Sheikh-Redoan/Time-Task-Tracker-N.git
    cd task-time-tracker
    ```
 
