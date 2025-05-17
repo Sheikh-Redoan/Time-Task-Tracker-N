@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Task Time Tracker</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #4361ee;
+            --secondary-color: #3f37c9;
+            --accent-color: #4895ef;
+            --light-color: #f8f9fa;
+            --dark-color: #212529;
+            --success-color: #4cc9f0;
+            --border-radius: 8px;
+            --box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f7fa;
+            color: var(--dark-color);
+            line-height: 1.6;
+        }
+
+        h1, h2, h3 {
+            color: var(--primary-color);
+            margin-top: 0;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            font-weight: 500;
+            font-size: 2.5rem;
+        }
+
+        .container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 25px;
+            justify-content: center;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            background: white;
+            border: none;
+            padding: 20px;
+            border-radius: var(--border-radius);
+            width: 320px;
+            box-shadow: var(--box-shadow);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        button {
+            padding: 10px 20px;
+            margin: 8px 0;
+            cursor: pointer;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: var(--border-radius);
+            font-size: 1rem;
+            transition: background-color 0.3s ease;
+        }
+
+        button:hover {
+            background-color: var(--secondary-color);
+        }
+
+        input, textarea, select {
+            width: 100%;
+            padding: 10px;
+            margin: 8px 0;
+            border: 1px solid #ddd;
+            border-radius: var(--border-radius);
+            font-family: inherit;
+            font-size: 1rem;
+            box-sizing: border-box;
+        }
+
+        input:focus, textarea:focus {
+            outline: none;
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 2px rgba(72, 149, 239, 0.2);
+        }
+
+        label {
+            font-weight: 500;
+            margin-top: 10px;
+            display: block;
+        }
+
+        #tasksList {
+            margin-top: 20px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            box-shadow: var(--box-shadow);
+            border-radius: var(--border-radius);
+            overflow: hidden;
+        }
+
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        th {
+            background-color: var(--primary-color);
+            color: white;
+            font-weight: 500;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+
+        tr:hover {
+            background-color: #e9ecef;
+        }
+
+        .summary-container {
+            background-color: white;
+            padding: 20px;
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
+            margin-top: 30px;
+        }
+
+        .task-item {
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        .task-item:last-child {
+            border-bottom: none;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .card {
+                width: 100%;
+                max-width: 400px;
+            }
+        }
+    </style>
+</head>
+<body>
+<h1>Task Time Tracker</h1>
+
+<div class="container">
+    <div class="card">
+        <h2>Add New Task</h2>
+        <input type="text" id="taskTitle" placeholder="Task Title">
+        <textarea id="taskDescription" placeholder="Description" rows="3"></textarea>
+        <label for="startTime">Start Time:</label>
+        <input type="datetime-local" id="startTime">
+        <label for="endTime">End Time:</label>
+        <input type="datetime-local" id="endTime">
+        <button onclick="addTask()">Add Task</button>
+    </div>
+
+    <div class="card">
+        <h2>Daily Summary</h2>
+        <label for="dailyDate">Select Date:</label>
+        <input type="date" id="dailyDate">
+        <button onclick="getDailySummary()">Get Summary</button>
+        <div id="dailyResult" class="summary-result"></div>
+    </div>
+
+    <div class="card">
+        <h2>Weekly Summary</h2>
+        <label for="weeklyDate">Select Start Date:</label>
+        <input type="date" id="weeklyDate">
+        <button onclick="getWeeklySummary()">Get Summary</button>
+        <div id="weeklyResult" class="summary-result"></div>
+    </div>
+</div>
+
+<div class="summary-container">
+    <h2>All Tasks</h2>
+    <button onclick="getAllTasks()">Refresh Tasks</button>
+    <div id="tasksList"></div>
+</div>
+
+<script>
+    const API_BASE = 'http://localhost:8080/api/tasks';
+
+    async function addTask() {
+        const task = {
+            title: document.getElementById('taskTitle').value,
+            description: document.getElementById('taskDescription').value,
+            startTime: document.getElementById('startTime').value,
+            endTime: document.getElementById('endTime').value
+        };
+
+        const response = await fetch(API_BASE, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(task)
+        });
+
+        const result = await response.json();
+        alert('Task added with ID: ' + result.id);
+        getAllTasks();
+    }
+
+    async function getDailySummary() {
+        const date = document.getElementById('dailyDate').value;
+        const response = await fetch(`${API_BASE}/summary/daily/${date}`);
+        const summary = await response.json();
+
+        document.getElementById('dailyResult').innerHTML = `
+            <h3>${summary.title}</h3>
+            <p><strong>Total Tasks:</strong> ${summary.totalTasks}</p>
+            <p><strong>Total Time:</strong> ${summary.totalHours}h ${summary.totalMinutes}m</p>
+            <h4>Tasks:</h4>
+            <ul style="list-style-type: none; padding-left: 0;">
+                ${summary.tasks.map(task => `
+                    <li class="task-item">
+                        <strong>${task.title}</strong> - ${task.durationInMinutes} minutes
+                    </li>
+                `).join('')}
+            </ul>
+        `;
+    }
+
+    async function getWeeklySummary() {
+        const date = document.getElementById('weeklyDate').value;
+        const response = await fetch(`${API_BASE}/summary/weekly/${date}`);
+        const summary = await response.json();
+
+        document.getElementById('weeklyResult').innerHTML = `
+            <h3>${summary.title}</h3>
+            <p><strong>Total Tasks:</strong> ${summary.totalTasks}</p>
+            <p><strong>Total Time:</strong> ${summary.totalHours}h ${summary.totalMinutes}m</p>
+            <h4>Tasks:</h4>
+            <ul style="list-style-type: none; padding-left: 0;">
+                ${summary.tasks.map(task => `
+                    <li class="task-item">
+                        <strong>${task.title}</strong> - ${task.durationInMinutes} minutes
+                    </li>
+                `).join('')}
+            </ul>
+        `;
+    }
+
+    async function getAllTasks() {
+        const response = await fetch(API_BASE);
+        const tasks = await response.json();
+
+        document.getElementById('tasksList').innerHTML = `
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Title</th>
+                        <th>Start Time</th>
+                        <th>End Time</th>
+                        <th>Duration (min)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${tasks.map(task => `
+                        <tr>
+                            <td>${task.id}</td>
+                            <td>${task.title}</td>
+                            <td>${new Date(task.startTime).toLocaleString()}</td>
+                            <td>${new Date(task.endTime).toLocaleString()}</td>
+                            <td>${task.durationInMinutes}</td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        `;
+    }
+
+    // Initialize with today's date
+    document.getElementById('dailyDate').valueAsDate = new Date();
+    document.getElementById('weeklyDate').valueAsDate = new Date();
+    getAllTasks();
+</script>
+</body>
+</html>
